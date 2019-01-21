@@ -16,12 +16,11 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import mapRenderer.JsonData;
 import mapRenderer.Street;
+import mapRenderer.utils.Coord;
+
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 class StreetsController extends Stage {
     private ComboBox<Direction> directionComboBox = new ComboBox<>();
@@ -32,14 +31,16 @@ class StreetsController extends Stage {
     private Button loadStreetsBtn = new Button("Wczytaj");
     private TableView<Street> streetsTable = new TableView<>();
     private TableColumn<Street, String> nameColumn = new TableColumn<>("Nazwa");
-    private TableColumn<Street,Double> speedColumn = new TableColumn<>("dozwolona prędkość");
+    private TableColumn<Street,Double> speedColumn = new TableColumn<>("Dozwolona prędkość");
     private TableColumn<Street, Direction> directionColumn = new TableColumn<>("Kierunek");
     private TableColumn<Street, Boolean> generatorColumn = new TableColumn<>("Punkt startowy");
+    private TableColumn<Street, Boolean> lightsColumn = new TableColumn<>("Światła");
 //    private ListView<Street> streetsView = new ListView<>();
-    private VBox controlBox = new VBox(new HBox(textField, directionComboBox),new HBox(speedField), new HBox(5, addStreetBtn, loadStreetsBtn), streetsTable, saveStreetsBtn);
+    private VBox controlBox = new VBox(new HBox(new VBox(10, new Label("Nazwa"), textField), new VBox(10, new Label("Kierunek"), directionComboBox)), new Label("Prędkość"), speedField, new HBox(5, addStreetBtn, loadStreetsBtn), streetsTable, saveStreetsBtn);
     private ObjectMapper mapper = new ObjectMapper();
     private MainWindowMapCreating mainWindow;
     private HashMap<Street, Circle> generatorPoints = new HashMap<>();
+    private HashMap<Street, Circle> lightPoints = new HashMap<>();
 
     StreetsController(MainWindowMapCreating mainWindowMapCreating) {
         super();
@@ -77,7 +78,14 @@ class StreetsController extends Stage {
 
     private void addStreet() {
 
-        Street street = new Street(textField.getText(), directionComboBox.getValue(), speedField.getText());
+        String speedText = speedField.getText();
+        double speed;
+        try {
+            speed = Double.parseDouble(speedText);
+        } catch (Exception e) {
+            speed = 0d;
+        }
+        Street street = new Street(textField.getText(), directionComboBox.getValue(), speed);
         textField.clear();
         speedField.clear();
         mainWindow.setCurrentStreet(street);
@@ -144,6 +152,16 @@ class StreetsController extends Stage {
                             }
                         }
                     });
+                    s.trafficLightsProperty().addListener((obs, old, val) -> {
+                        if (val) {
+                            drawTrafficLights(s);
+                        } else {
+                            Circle c = lightPoints.get(s);
+                            if (c != null) {
+                                mainWindow.getCanvasPane().getChildren().remove(c);
+                            }
+                        }
+                    });
                     s.getCoords().forEach(c -> {
                         Circle circle = new Circle(3);
                         circle.setUserData(s);
@@ -156,6 +174,23 @@ class StreetsController extends Stage {
             } catch (IOException e1) {
                 e1.printStackTrace();
             }
+        }
+    }
+
+    private void drawTrafficLights(Street s) {
+
+        Object[] coords = s.getCoords().toArray();
+        if(coords.length > 0) {
+            Coord c = (Coord)coords[coords.length - 1];
+            Circle circle = new Circle(15);
+            circle.setUserData(s);
+            circle.setStroke(Color.GREEN);
+            circle.setStrokeWidth(3);
+            circle.setFill(Color.ORANGERED);
+            circle.setCenterX(c.getX());
+            circle.setCenterY(c.getY());
+            mainWindow.getCanvasPane().getChildren().add(circle);
+            lightPoints.put(s, circle);
         }
     }
 
@@ -185,9 +220,12 @@ class StreetsController extends Stage {
     }
 
     private void buildTable() {
+        streetsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         directionColumn.setCellValueFactory(new PropertyValueFactory<>("direction"));
         generatorColumn.setCellValueFactory(new PropertyValueFactory<>("generator"));
+        lightsColumn.setCellValueFactory(new PropertyValueFactory<>("trafficLights"));
+        speedColumn.setCellValueFactory(new PropertyValueFactory<>("speedLimit"));
         generatorColumn.setCellFactory(col -> new TableCell<>(){
             private CheckBox checkBox = new CheckBox();
             @Override
@@ -201,7 +239,20 @@ class StreetsController extends Stage {
                 }
             }
         });
-        streetsTable.getColumns().setAll(Arrays.asList(nameColumn, directionColumn, generatorColumn));
+        lightsColumn.setCellFactory(col -> new TableCell<>(){
+            private CheckBox checkBox = new CheckBox();
+            @Override
+            public void updateItem(Boolean item, boolean empty){
+                if(item == null || empty) {
+                    setGraphic(null);
+                } else {
+                    checkBox.setSelected(item);
+                    setGraphic(checkBox);
+                    checkBox.setOnAction(e -> getTableRow().getItem().setTrafficLights(checkBox.isSelected()));
+                }
+            }
+        });
+        streetsTable.getColumns().setAll(Arrays.asList(nameColumn, directionColumn, generatorColumn, lightsColumn, speedColumn));
     }
 
     public ObservableList<Street> getStreets() {

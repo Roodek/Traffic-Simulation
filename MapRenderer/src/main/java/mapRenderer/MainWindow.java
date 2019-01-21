@@ -46,7 +46,7 @@ class MainWindow extends Stage {
     MainWindow(JsonData data) {
         this();
         build();
-        run(data.getStreets());
+        run(data.getStreets(),data.getCrossroads());
     }
 
 
@@ -98,20 +98,20 @@ class MainWindow extends Stage {
         roadGC.setLineWidth(3);
     }
 
-    private void run(List<Street> streets) {
+    private void run(List<Street> streets, List<Crossroad> crossroads) {
 
         // task zawiera 3 petle : główna, iterująca po drogach i iterująca po liscie samochodów sie na niej znajdujacych
         //1px ~= 2.5 m
         //todo: zaktualizować przelicznik prędkości(odleglosci miedzy pojazdami i do konca drogi)
         tasks.add(
                 executorService.submit(() -> {
-                    int spawnFlag = 5;//ile samochodow jest wygenerowanych
+                    int spawnFlag = 2;
                     int iterations = 0;
 
                     while(true){
                         System.out.println("iteration: "+iterations);
                         for(Street street:streets){
-                            if(street.isGenerator() && spawnFlag > 0 && iterations%30 == 0 ){
+                            if(street.isGenerator() && spawnFlag > 0 && iterations%20 == 0 ){
                                 System.out.println("spawned");
                                 street.generateCar(spawnFlag);
                                 spawnFlag -= 1;
@@ -120,18 +120,35 @@ class MainWindow extends Stage {
                             LinkedList<Coord> coords = new LinkedList<>(street.getCoords());
 
                             for(Vehicle vehicle: street.getVehiclesOnRoad()){
+                                vehicle.updateSpeed();
                                 int index = coords.indexOf(vehicle.getPosition());
                                 int nextIndex = index + (int)Coord.kmh2ms(vehicle.getSpeed());
                                 if(nextIndex >= coords.size()){
                                     nextIndex = coords.size()-1;
                                 }
-                                System.out.println("coords from: "+index+" coords to: "+nextIndex+"id: "+vehicle.id+ "distance from next car: "+ vehicle.getNextVehicleDistance());
+                                System.out.println("coords from: "+index+" coords to: "+nextIndex+"street:  "+vehicle.getStreet().getName());
                                 vehicle.setPosition(coords.get(nextIndex));
 
                                 drawCircle(vehicle.getPosition());
 
                                 if(vehicle.getPosition().equals(coords.getLast())){
                                     //todo obsługa dojechania do konca drogi(skrzyzowania)
+                                    for(Crossroad crossroad: crossroads){
+                                        if(crossroad.isVehicleOnCrossroad(vehicle)){// pojazd "w zasiegu razenia skrzyzowania"
+
+                                            Street newStreet = crossroad.getRandomStreetApartFromStreet();
+                                            vehicle.setStreet(newStreet);
+                                            newStreet.addVehicleToStreet(vehicle);
+                                            street.popVehicleFromStreet(vehicle);
+
+                                            System.out.println("new street: "+vehicle.getStreet().getName());
+                                            try {
+                                                Thread.sleep(100);
+                                            } catch (InterruptedException e) {
+                                                return;
+                                            }
+                                        }
+                                    }
                                 }
 
                             }
@@ -148,8 +165,6 @@ class MainWindow extends Stage {
         );
 
 
-
-
     }
 
     public void drawCircle(Coord coord){
@@ -157,7 +172,7 @@ class MainWindow extends Stage {
         carGC.setStroke(Color.RED);
         carGC.setFill(Color.RED);
         carGC.fillOval(1400,122, 10,10);
-        carGC.fillOval(coord.getX(), coord.getY(), 8, 8);
+        carGC.fillOval(coord.getX(), coord.getY(), 6, 6);
     }
 
 }

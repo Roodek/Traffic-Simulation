@@ -16,16 +16,17 @@ public class Street {
     private Direction direction;
     private double speedLimit;
     private SimpleBooleanProperty generator = new SimpleBooleanProperty(false);
+    private SimpleBooleanProperty trafficLights = new SimpleBooleanProperty(false);
     private LinkedHashSet<Coord> coords = new LinkedHashSet<>();
     private LinkedList<Vehicle> vehiclesOnRoad = new LinkedList<>();
 
     public Street() {
     }
 
-    public Street(String name, Direction direction, String speed) {
+    public Street(String name, Direction direction, Double speed) {
         this.name = name;
         this.direction = direction;
-        this.speedLimit = Double.parseDouble(speed);
+        this.speedLimit = speed;
     }
 
     public String getName() {
@@ -75,9 +76,9 @@ public class Street {
     public void generateCar(int id){
         Vehicle vehicle = new Vehicle();
         vehicle.setStreet(this);
-        vehicle.setSpeed(10);
+        vehicle.setSpeed(5);
         vehicle.id = id;
-        vehiclesOnRoad.add(vehicle);
+        addVehicleToStreet(vehicle);
     }
 
     public void addVehicleToStreet(Vehicle vehicle){
@@ -87,6 +88,29 @@ public class Street {
         this.vehiclesOnRoad.remove(vehicle);
     }
 
+    public double getSpeedLimit() {
+        return speedLimit;
+    }
+
+    public void setSpeedLimit(double speedLimit) {
+        this.speedLimit = speedLimit;
+    }
+
+    public boolean isTrafficLights() {
+        return trafficLights.get();
+    }
+
+    public SimpleBooleanProperty trafficLightsProperty() {
+        return trafficLights;
+    }
+
+    public void setTrafficLights(boolean trafficLights) {
+        this.trafficLights.set(trafficLights);
+    }
+
+    public void setVehiclesOnRoad(LinkedList<Vehicle> vehiclesOnRoad) {
+        this.vehiclesOnRoad = vehiclesOnRoad;
+    }
 
 
     @Override

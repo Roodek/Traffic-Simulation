@@ -49,7 +49,7 @@ public class MainWindowMapCreating extends Stage {
     private void setEvents() {
         canvasPane.setOnMouseDragged(this::drawCoordinates);
         canvasPane.setOnMouseClicked(e -> {
-            if(canvasPane.getCursor().equals(Cursor.CROSSHAIR)) {
+            if(Cursor.CROSSHAIR.equals(canvasPane.getCursor())) {
                 crossroadsController.addCrossroad(new Coord(e.getX()-8, e.getY()-8));
                 canvasPane.setCursor(Cursor.DEFAULT);
             }
